@@ -1,6 +1,9 @@
 package com.example.demo.models;
 
 import jakarta.persistence.*;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.hibernate.annotations.processing.Pattern;
+
 import java.util.Date;
 
 @Entity
@@ -12,9 +15,17 @@ public class Usuario {
     @Column(unique = true, nullable = false)
     private Long id;
 
-
+    @NotNull
+    @NotEmpty
+    @NotBlank
     private String nombre;
+
+    @NotNull
+    @NotEmpty
+    @NotBlank
+    @Email
     private String email;
+
     private Date fechaRegistro;
 
     public Long getId() {
