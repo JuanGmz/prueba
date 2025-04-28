@@ -1,8 +1,10 @@
 package com.example.demo.models;
 
 import jakarta.persistence.*;
-import org.antlr.v4.runtime.misc.NotNull;
-import org.hibernate.annotations.processing.Pattern;
+import jakarta.annotation.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import org.hibernate.validator.constraints.UniqueElements;
 
 import java.util.Date;
 
@@ -15,19 +17,17 @@ public class Usuario {
     @Column(unique = true, nullable = false)
     private Long id;
 
-    @NotNull
-    @NotEmpty
-    @NotBlank
+    @Nonnull
     private String nombre;
 
-    @NotNull
-    @NotEmpty
-    @NotBlank
-    @Email
+    @NotBlank(message = "El email no puede estar vacío")
+    @Email(message = "Debe ser un correo válido")
+    @Column(unique = true)
     private String email;
 
     private Date fechaRegistro;
 
+    // Getters y Setters
     public Long getId() {
         return id;
     }
