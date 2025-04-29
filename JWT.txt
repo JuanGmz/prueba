@@ -1,0 +1,103 @@
+Para implementar JWT (JSON WEB TOKENS) es necesario instalar la dependencia en el archivo pom.xml en caso de que usemos maven.
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.11.5</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+
+Después tenemos que crear una clase para generar y validar tokens la clase debe de ser la siguiente:
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import java.util.Date;
+import java.security.Key;
+
+public class JwtUtil {
+    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private static final long EXPIRATION_TIME = 864_000_00; // Aqui tenemos el tiempo en el que el token expira en milisegundos, equivalente a un día
+
+    public static String generarToken(String username) {
+        return Jwts.builder()
+            .setSubject(username)
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+            .signWith(SECRET_KEY)
+            .compact();
+    }
+
+    public static String obtenerUsernameDelToken(String token) {
+        return Jwts.parserBuilder()
+            .setSigningKey(SECRET_KEY)
+            .build()
+            .parseClaimsJws(token)
+            .getBody()
+            .getSubject();
+    }
+}
+
+Luego hay que modificar el servicio de autenticación para que al hacer el login se genere el JWT.
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class LoginController {
+
+    @PostMapping("/login")
+    public String login(@RequestBody Usuario usuario) {
+        // Aquí se válida con la base de datos
+        if ("admin".equals(usuario.getUsername()) && "1234".equals(usuario.getPassword())) {
+            return JwtUtil.generarToken(usuario.getUsername());
+        }
+        throw new RuntimeException("Credenciales inválidas");
+    }
+}
+
+Después se tiene que configurar el filtro o middleware que verifiquen el JWT en cada solicitud.
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import javax.servlet.FilterChain;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.ServletException;
+import java.io.IOException;
+
+@Component
+public class JwtFiltro extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        String header = request.getHeader("Authorization");
+
+        if (header == null || !header.startsWith("Bearer ")) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        String token = header.replace("Bearer ", "");
+        try {
+            String username = JwtUtil.obtenerUsernameDelToken(token);
+            // Aquí podrías cargar el usuario al contexto de Spring Security si quieres
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+eh opero
